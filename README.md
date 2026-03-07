@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # farm_rental
 
 A new Flutter project.
@@ -14,3 +15,7 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+=======
+# farm-equipment-rental-discovery-system
+A smart platform for farmers to discover, list, and rent agricultural equipment from nearby owners with location-based search and secure booking.
+>>>>>>> a3792253ef1f68d38c4001f3d2c6e119cbeb0373
