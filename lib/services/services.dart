@@ -1,5 +1,6 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -8,10 +9,48 @@ import '../utils/app_theme.dart';
 
 final _sb = Supabase.instance.client;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AuthService
-// ─────────────────────────────────────────────────────────────────────────────
 class AuthService {
+  Future<UserModel> _upsertUserProfile({
+    required String uid,
+    required String email,
+    required String name,
+    required String phone,
+    String role = AppConstants.roleUser,
+  }) async {
+    final profile = {
+      'id': uid,
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'role': role,
+    };
+    final row = await _sb.from('users').upsert(profile).select().single();
+    return UserModel.fromMap(row);
+  }
+
+  Future<UserModel> resolveUserProfile(
+    User authUser, {
+    required String fallbackEmail,
+  }) async {
+    final existing = await getUser(authUser.id);
+    if (existing != null) return existing;
+
+    final meta = authUser.userMetadata ?? {};
+    final rawName = meta['name'] as String?;
+    final name = rawName != null && rawName.trim().isNotEmpty
+        ? rawName.trim()
+        : (authUser.email ?? fallbackEmail).split('@').first;
+    final phone = (meta['phone'] as String?) ?? '';
+    final role = (meta['role'] as String?) ?? AppConstants.roleUser;
+    return _upsertUserProfile(
+      uid: authUser.id,
+      email: authUser.email ?? fallbackEmail,
+      name: name,
+      phone: phone,
+      role: role,
+    );
+  }
+
   Future<UserModel> register({
     required String name,
     required String email,
@@ -31,16 +70,20 @@ class AuthService {
     final profile = {
       'id': uid, 'name': name, 'email': email, 'phone': phone, 'role': role,
     };
-    // Upsert in case the trigger already created a row
-    await _sb.from('users').upsert(profile);
+    try {
+      await _sb.from('users').upsert(profile);
+    } on PostgrestException catch (e) {
+      if (e.code != '42501') rethrow;
+    }
     return UserModel.fromMap({...profile, 'created_at': DateTime.now().toIso8601String()});
   }
 
   Future<UserModel?> login({required String email, required String password}) async {
-    await _sb.auth.signInWithPassword(email: email, password: password);
-    final uid = _sb.auth.currentUser?.id;
-    if (uid == null) return null;
-    return getUser(uid);
+    final res = await _sb.auth.signInWithPassword(email: email, password: password);
+    final authUser = res.user ?? _sb.auth.currentUser;
+    if (authUser == null) return null;
+
+    return resolveUserProfile(authUser, fallbackEmail: email);
   }
 
   Future<UserModel?> getUser(String uid) async {
@@ -62,9 +105,6 @@ class AuthService {
   Stream<AuthState> get authStateChanges => _sb.auth.onAuthStateChange;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// StorageService
-// ─────────────────────────────────────────────────────────────────────────────
 class StorageService {
   Future<List<String>> uploadEquipmentImages(List<File> images, String listingId) async {
     final List<String> urls = [];
@@ -79,11 +119,31 @@ class StorageService {
     }
     return urls;
   }
+
+  Future<List<String>> uploadEquipmentImageBytes(List<Uint8List> images, String listingId) async {
+    final List<String> urls = [];
+    for (int i = 0; i < images.length; i++) {
+      final path = 'listings/$listingId/${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+      await _sb.storage
+          .from(AppConstants.equipmentBucket)
+          .uploadBinary(path, images[i],
+              fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true));
+      urls.add(_sb.storage.from(AppConstants.equipmentBucket).getPublicUrl(path));
+    }
+    return urls;
+  }
+
+  Future<String> uploadProfileImage(File image, String userId) async {
+    final path = 'profiles/$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final bytes = await image.readAsBytes();
+    await _sb.storage
+        .from(AppConstants.profileBucket)
+        .uploadBinary(path, bytes,
+            fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true));
+    return _sb.storage.from(AppConstants.profileBucket).getPublicUrl(path);
+  }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ListingService
-// ─────────────────────────────────────────────────────────────────────────────
 class ListingService {
   final _storage = StorageService();
 
@@ -105,19 +165,22 @@ class ListingService {
         .map((rows) => rows.map(EquipmentListing.fromMap).toList());
   }
 
-  /// Search listings near [lat]/[lng] within [radiusKm]
   Future<List<EquipmentListing>> searchListings({
     required double lat,
     required double lng,
     required double radiusKm,
     String? type,
     double? maxPrice,
+    double? minPrice,
+    bool? insuranceOnly,
     DateTime? startDate,
     DateTime? endDate,
   }) async {
     var query = _sb.from('listings').select().eq('is_active', true);
     if (type != null && type.isNotEmpty) query = query.eq('type', type);
     if (maxPrice != null) query = query.lte('price_per_day', maxPrice);
+    if (minPrice != null) query = query.gte('price_per_day', minPrice);
+    if (insuranceOnly == true) query = query.eq('insurance_available', true);
 
     final rows = await query;
     final listings = (rows as List).map((r) => EquipmentListing.fromMap(r)).toList();
@@ -128,7 +191,6 @@ class ListingService {
       return d <= radiusKm;
     }).toList();
 
-    // Date availability check
     List<EquipmentListing> available = filtered;
     if (startDate != null && endDate != null) {
       final bookingRows = await _sb
@@ -162,6 +224,9 @@ class ListingService {
   Future<List<String>> uploadImages(List<File> images, String listingId) =>
       _storage.uploadEquipmentImages(images, listingId);
 
+    Future<List<String>> uploadImagesBytes(List<Uint8List> images, String listingId) =>
+      _storage.uploadEquipmentImageBytes(images, listingId);
+
   double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
     const R = 6371.0;
     final dLat = (lat2 - lat1) * pi / 180;
@@ -172,9 +237,6 @@ class ListingService {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BookingService — fixed method names: updateStatus() & markCompleted()
-// ─────────────────────────────────────────────────────────────────────────────
 class BookingService {
   Future<String> createBooking(BookingModel booking) async {
     final row = await _sb.from('bookings').insert(booking.toMap()).select().single();
@@ -199,44 +261,89 @@ class BookingService {
         .map((rows) => rows.map(BookingModel.fromMap).toList());
   }
 
-  /// Update booking status — called updateStatus() in Supabase version
   Future<void> updateStatus(
     String bookingId, {
     required String status,
     String? declineReason,
+    DateTime? estimatedReturn,
+    String? paymentStatus,
   }) async {
-    await _sb.from('bookings').update({
-      'status': status,
-      'updated_at': DateTime.now().toIso8601String(),
-      if (declineReason != null) 'decline_reason': declineReason,
-    }).eq('id', bookingId);
+    try {
+      final rows = await _sb.from('bookings').update({
+        'status': status,
+        'updated_at': DateTime.now().toIso8601String(),
+        if (declineReason != null) 'decline_reason': declineReason,
+        if (estimatedReturn != null) 'estimated_return': estimatedReturn.toIso8601String(),
+        if (paymentStatus != null) 'payment_status': paymentStatus,
+      }).eq('id', bookingId).select().maybeSingle();
+
+      if (rows == null) {
+        throw Exception('Update failed: no booking found or no permission.');
+      }
+    } on PostgrestException catch (e) {
+      throw Exception('Booking update failed: ${e.message}');
+    }
   }
 
-  /// Convenience wrapper
   Future<void> markCompleted(String bookingId) => updateStatus(bookingId, status: AppConstants.statusCompleted);
 
   Future<bool> hasConflict(String listingId, DateTime start, DateTime end) async {
     final rows = await _sb
         .from('bookings')
-        .select('id')
+        .select('id, start_date, end_date, start_time, end_time, duration_type, status')
         .eq('listing_id', listingId)
-        .neq('status', 'Declined')
-        .lte('start_date', end.toIso8601String().split('T').first)
-        .gte('end_date', start.toIso8601String().split('T').first);
-    return (rows as List).isNotEmpty;
+        .neq('status', 'Declined');
+    for (final r in rows as List) {
+      final status = (r['status'] ?? 'Pending') as String;
+      if (status == AppConstants.statusDeclined) continue;
+      final dur = r['duration_type'] ?? 'full_day';
+      if (dur == 'hourly' || r['start_time'] != null || r['end_time'] != null) {
+        final existingStart = DateTime.parse(r['start_time'] as String);
+        final existingEnd = DateTime.parse(r['end_time'] as String);
+        if (!(end.isBefore(existingStart) || start.isAfter(existingEnd))) return true;
+      } else {
+        final existingStart = DateTime.parse(r['start_date'] as String);
+        final existingEnd = DateTime.parse(r['end_date'] as String);
+        if (!(end.isBefore(existingStart) || start.isAfter(existingEnd))) return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> cancelBooking(String bookingId, {required String cancelledBy, String? reason}) async {
+    await _sb.from('bookings').update({
+      'status': AppConstants.statusDeclined,
+      'cancelled_by': cancelledBy,
+      'cancel_reason': reason,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', bookingId);
+  }
+
+  Future<void> rescheduleBooking(String bookingId, {
+    required DateTime start,
+    required DateTime end,
+    DateTime? startTime,
+    DateTime? endTime,
+    String durationType = 'full_day',
+  }) async {
+    await _sb.from('bookings').update({
+      'start_date': start.toIso8601String().split('T').first,
+      'end_date': end.toIso8601String().split('T').first,
+      'start_time': startTime?.toIso8601String(),
+      'end_time': endTime?.toIso8601String(),
+      'duration_type': durationType,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', bookingId);
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ReviewService
-// ─────────────────────────────────────────────────────────────────────────────
 class ReviewService {
   Future<void> submitReview(ReviewModel review) async {
     await _sb.from('reviews').insert(review.toMap());
     try {
       await _sb.rpc('update_owner_rating',   params: {'owner_uuid':   review.ownerId});
       await _sb.rpc('update_listing_rating', params: {'listing_uuid': review.listingId});
-    } catch (_) {} // RPCs may not exist yet in dev
+    } catch (_) {}
   }
 
   Stream<List<ReviewModel>> getListingReviews(String listingId) {
@@ -249,9 +356,6 @@ class ReviewService {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// NotificationService
-// ─────────────────────────────────────────────────────────────────────────────
 class NotificationService {
   Future<void> send({
     required String userId,
@@ -288,9 +392,6 @@ class NotificationService {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// LocationService
-// ─────────────────────────────────────────────────────────────────────────────
 class LocationService {
   Future<Position?> getCurrentPosition() async {
     if (!await Geolocator.isLocationServiceEnabled()) return null;

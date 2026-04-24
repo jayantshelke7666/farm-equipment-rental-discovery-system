@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../models/models.dart';
-import '../services/services.dart';
 import '../utils/app_theme.dart';
 import '../widgets/widgets.dart';
 
@@ -129,7 +128,7 @@ class _UsersTabState extends State<_UsersTab> {
             child: Text(u.name.isNotEmpty ? u.name[0].toUpperCase() : 'U',
               style: TextStyle(color: u.role == AppConstants.roleAdmin ? AppColors.accent : AppColors.primary, fontWeight: FontWeight.w700)),
           ),
-          title: Text(u.name), subtitle: Text('${u.email} · ${u.role}'),
+          title: Text(u.name), subtitle: Text('${u.email} Â· ${u.role}'),
           trailing: u.isVerified
             ? const Icon(Icons.verified, color: AppColors.primary, size: 20)
             : TextButton(onPressed: () async {
@@ -168,7 +167,7 @@ class _ListingsTabState extends State<_ListingsTab> {
               ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(l.imageUrls.first, fit: BoxFit.cover))
               : const Icon(Icons.agriculture, color: AppColors.primary)),
           title: Text(l.name),
-          subtitle: Text('${l.type} · ₹${l.pricePerDay.toInt()}/day · ${l.ownerName}'),
+          subtitle: Text('${l.type} Â· â‚¹${l.pricePerDay.toInt()}/day Â· ${l.ownerName}'),
           trailing: Switch(value: l.isActive, activeColor: AppColors.primary, onChanged: (v) async {
             await _sb.from('listings').update({'is_active': v}).eq('id', l.id);
             _load();

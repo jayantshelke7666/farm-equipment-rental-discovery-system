@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../models/models.dart';
 import '../utils/app_theme.dart';
 
-// ─── Primary Button ────────────────────────────────────────────────────────
 class PrimaryButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
@@ -47,7 +46,6 @@ class PrimaryButton extends StatelessWidget {
   }
 }
 
-// ─── Status Badge ──────────────────────────────────────────────────────────
 class StatusBadge extends StatelessWidget {
   final String status;
   const StatusBadge(this.status, {super.key});
@@ -83,7 +81,6 @@ class StatusBadge extends StatelessWidget {
   }
 }
 
-// ─── Equipment Card ────────────────────────────────────────────────────────
 class EquipmentCard extends StatelessWidget {
   final EquipmentListing listing;
   final VoidCallback onTap;
@@ -100,7 +97,6 @@ class EquipmentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image area
             ClipRRect(
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(16)),
@@ -151,7 +147,7 @@ class EquipmentCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           listing.distanceKm != null
-                              ? '${listing.distanceKm!.toStringAsFixed(1)} km · ${listing.address}'
+                              ? '${listing.distanceKm!.toStringAsFixed(1)} km Â· ${listing.address}'
                               : listing.address,
                           style:
                               Theme.of(context).textTheme.bodyMedium,
@@ -164,7 +160,6 @@ class EquipmentCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      // Rating
                       RatingBarIndicator(
                         rating: listing.averageRating,
                         itemBuilder: (_, __) =>
@@ -179,9 +174,8 @@ class EquipmentCard extends StatelessWidget {
                               color: AppColors.textSecondary,
                               fontWeight: FontWeight.w600)),
                       const Spacer(),
-                      // Price
                       Text(
-                        '₹${listing.pricePerDay.toInt()}',
+                        'â‚¹${listing.pricePerDay.toInt()}',
                         style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -211,7 +205,6 @@ class EquipmentCard extends StatelessWidget {
   }
 }
 
-// ─── Booking Card ──────────────────────────────────────────────────────────
 class BookingCard extends StatelessWidget {
   final BookingModel booking;
   final VoidCallback onTap;
@@ -238,8 +231,18 @@ class BookingCard extends StatelessWidget {
                       color: AppColors.primary.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.agriculture,
-                        color: AppColors.primary, size: 26),
+                    child: booking.listingImageUrl.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              booking.listingImageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.agriculture,
+                                  color: AppColors.primary, size: 26),
+                            ),
+                          )
+                        : const Icon(Icons.agriculture,
+                            color: AppColors.primary, size: 26),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -264,10 +267,10 @@ class BookingCard extends StatelessWidget {
               Row(
                 children: [
                   _infoChip(Icons.calendar_today,
-                      '${_fmt(booking.startDate)} – ${_fmt(booking.endDate)}'),
+                      '${_fmt(booking.startDate)} â€“ ${_fmt(booking.endDate)}'),
                   const Spacer(),
                   _infoChip(Icons.currency_rupee,
-                      '₹${booking.totalPrice.toInt()} total'),
+                      'â‚¹${booking.totalPrice.toInt()} total'),
                 ],
               ),
             ],
@@ -295,7 +298,6 @@ class BookingCard extends StatelessWidget {
   String _fmt(DateTime d) => '${d.day}/${d.month}/${d.year}';
 }
 
-// ─── Section Header ────────────────────────────────────────────────────────
 class SectionHeader extends StatelessWidget {
   final String title;
   final String? actionLabel;
@@ -326,7 +328,6 @@ class SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Empty State ───────────────────────────────────────────────────────────
 class EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -379,7 +380,6 @@ class EmptyState extends StatelessWidget {
   }
 }
 
-// ─── App Logo ──────────────────────────────────────────────────────────────
 class AppLogo extends StatelessWidget {
   final double size;
   final bool showText;

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
@@ -107,24 +107,24 @@ class AppTheme {
 }
 
 class AppConstants {
-  static const String supabaseUrl = 'https://acwhttldtzvpddyispzi.supabase.co';
+  static const String supabaseUrl = 'https://uunemdrgthcwmqxshzug.supabase.co';
   static const String supabaseAnonKey =
-      'sb_publishable_EvcykOr5Lxc_yx3WIC1Ibw_kszbe01m';
+      'sb_publishable_lvrYv8cu5KFvOrYe90k8ZA_yWwEEAFe';
 
-  // Must match the Supabase storage bucket name shown in the dashboard
   static const String equipmentBucket = 'listings';
   static const String profileBucket   = 'profile-images';
 
   static const String appName    = 'KisanYantra';
   static const String appTagline = 'Farm Equipment at Your Fingertips';
-  static const String roleUser   = 'user';       // unified renter/owner
-  static const String roleFarmer = 'farmer';     // legacy value
-  static const String roleOwner  = 'owner';      // legacy value
+  static const String roleUser   = 'user';
+  static const String roleFarmer = 'farmer';
+  static const String roleOwner  = 'owner';
   static const String roleAdmin  = 'admin';
 
   static const String statusPending   = 'Pending';
   static const String statusApproved  = 'Approved';
   static const String statusDeclined  = 'Declined';
+  static const String statusInUse     = 'In Use';
   static const String statusCompleted = 'Completed';
 
   static const List<String> equipmentTypes = [

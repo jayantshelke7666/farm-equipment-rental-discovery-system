@@ -1,12 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/app_theme.dart';
 import '../widgets/widgets.dart';
 
-// ──────────────────────────────────────────────────────────────────────────────
-// LoginScreen
-// ──────────────────────────────────────────────────────────────────────────────
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
   @override
@@ -63,7 +60,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: Theme.of(context).textTheme.bodyMedium),
                 const SizedBox(height: 32),
 
-                // Email
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
@@ -76,7 +72,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Password
                 TextFormField(
                   controller: _passCtrl,
                   obscureText: _obscure,
@@ -95,7 +90,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
 
-                // Forgot password
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -106,7 +100,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
-                // Error
                 if (auth.errorMessage != null) ...[
                   const SizedBox(height: 4),
                   Container(
@@ -163,9 +156,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// RegisterScreen
-// ──────────────────────────────────────────────────────────────────────────────
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
   @override
@@ -227,7 +217,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: Theme.of(context).textTheme.bodyMedium),
                 const SizedBox(height: 28),
 
-                // Role selector
                 TextFormField(
                   controller: _nameCtrl,
                   decoration: const InputDecoration(
@@ -324,9 +313,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// ForgotPasswordScreen
-// ──────────────────────────────────────────────────────────────────────────────
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
   @override

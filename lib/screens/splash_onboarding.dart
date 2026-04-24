@@ -1,12 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/app_theme.dart';
 import '../widgets/widgets.dart';
 
-// ──────────────────────────────────────────────────────────────────────────────
-// SplashScreen
-// ──────────────────────────────────────────────────────────────────────────────
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
   @override
@@ -29,11 +26,14 @@ class _SplashScreenState extends State<SplashScreen>
         .animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
     _ctrl.forward();
 
-    Future.delayed(const Duration(seconds: 2), _navigate);
+    _navigateWhenReady();
   }
 
-  void _navigate() {
+  Future<void> _navigateWhenReady() async {
     final auth = context.read<AuthProvider>();
+    await auth.waitForBootstrap();
+    if (!mounted) return;
+
     if (auth.isLoggedIn) {
       if (auth.isAdmin) {
         Navigator.pushReplacementNamed(context, '/admin');
@@ -110,9 +110,6 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// OnboardingScreen
-// ──────────────────────────────────────────────────────────────────────────────
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
   @override
@@ -129,7 +126,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       color: AppColors.primary,
       title: 'Discover Equipment Near You',
       subtitle:
-          'Find tractors, harvesters, sprayers and more — all available within your radius.',
+          'Find tractors, harvesters, sprayers and more â€” all available within your radius.',
     ),
     _OnboardingPage(
       icon: Icons.handshake_rounded,
@@ -143,7 +140,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       color: AppColors.accent,
       title: 'Trusted Community',
       subtitle:
-          'Verified profiles, honest reviews, and transparent pricing — always.',
+          'Verified profiles, honest reviews, and transparent pricing â€” always.',
     ),
   ];
 
@@ -166,7 +163,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
               child: Column(
                 children: [
-                  // Dots
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
